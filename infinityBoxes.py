@@ -6,7 +6,7 @@ from pyglet.gl import *
 import pyglet.gl as GL
 import ctypes
 import sys
-
+import random
 
 #movint to 2d construct
 #box
@@ -14,18 +14,22 @@ def pr(string):
     print(string, end="")
 
 class box: #these settings control the pattern. Most settings will result in boring looping patterns
+    boost = 0.04 #0.04
+    excite = 0.22 #.22 excited firing threshold raising reduces chain reaction increases wave loss
+    expR = 0.5
+    expB = 0.5
+    expG = 1
+    firstClick = False
     def __init__(self, number): #good settings in comment
         self.value = 0
         self.number = number 
         self.dt = 0.10 #.10 timestep (in s) adjusting down increases wave failure
         self.friends = []
         self.decay = self.dt/3 #dt/3  #dt/9 decay rate
-        self.boost = 0.04 #0.04
-        self.excite = 0.22 #.22 excited firing threshold raising reduces chain reaction increases wave loss
         self.falling = True
         self.last = 1
         self.fired = False
-        self.frequency = 0.11 #0.11 #target firing frequency in fires/sec
+        self.frequency = 0.11 #@/8 +0.005 not #0.11 #target firing frequency in fires/sec
         self.movingAverage = 1
         self.fatigue = 0 #value of fatigue
 
@@ -39,10 +43,10 @@ class box: #these settings control the pattern. Most settings will result in bor
     def get(self):
         return self.value
 
-    def share(self): #spread value to friends
+    def share(self, fraction=1): #spread value to friends
         for friend in self.friends: #for each of the "friend" connections
-            friend.set(friend.get() + self.dt*(self.value/len(self.friends))) #add dt fraction of current energy to friends
-        self.value -= self.value*self.dt #so energy is conserved, subtract from self
+            friend.set(friend.get() + fraction*self.dt*(self.value/len(self.friends))) #add dt fraction of current energy to friends
+        self.value -= fraction*self.value*self.dt #so energy is conserved, subtract from self
     
     def eval(self):
         #fire due to low value
@@ -85,6 +89,15 @@ class box: #these settings control the pattern. Most settings will result in bor
             self.fatigue = (self.movingAverage - 1)*(1 - self.excite)
         return self.fatigue
 
+    def reset(self): #reset to starting settings
+        self.value = 0
+        self.falling = True
+        self.last = 1
+        self.fired = False
+        self.frequency = 0.11 #@/8 +0.005 not #0.11 #target firing frequency in fires/sec
+        self.movingAverage = 1
+        self.fatigue = 0 #value of fatigue
+
       
 
 
@@ -94,15 +107,15 @@ class box: #these settings control the pattern. Most settings will result in bor
 
 
 #Pyglet gfx
-size = 6
-
+size = 2
 batch = graphics.Batch()
 
-divy = int(216/size) #108/3
-divx = int(384/size) #192/3
+divy = int(109/size) #108/3
+divx = int(193/size) #192/3 768
 
+pxmult = 6
 
-window = pyglet.window.Window(divx*10,divy*10)
+window = pyglet.window.Window(divx*pxmult,divy*pxmult)
 window.set_fullscreen()
 
 hy = int(window.height/divy)
@@ -200,45 +213,116 @@ for j in range(len(boxes)):
 for j in range(len(boxes)):
     for i in range(len(boxes[j])):
         boxes[j][i].set(0.4)
-boxes[int(len(boxes)/2)][int(len(boxes[0])/2)].set(1.0)
+#commented for user start
+#boxes[int(len(boxes)/2)][int(len(boxes[0])/2)].set(1.0)
 
 
 depth = 0
 deltaDepth = 1
-
+#update the simulation
 def update(dt):
     if(True):
-        #Update the 2d grid of boxes
+        #boxes share value with neighbors
+         #to maintain symetry it is important to make sure the order of evaluation has minimal effect
+
+         #as a result we share from each different direction as well as randomize the order
+
+        #totalshares
+        shares = 2/8
+
+
+        used = []
+        #randomise order
+        for k in range(8):
+
+            #random integer from 1 to 8
+            clear = False
+            switch = 0
+            while(not clear):
+                switch = random.randint(0,7)
+                clear = True
+                for l in range(len(used)):
+                    if(switch == used[l]):
+                        clear = False
+
+            used.append(switch) #record used
+
+            if(switch == 0):
+                #1
+                for j in range(len(boxes)):
+                    for i in range(len(boxes[j])):
+                        #run simulation
+                        boxes[j][i].share(shares)
+
+            elif(switch == 1):
+                #2
+                for j in range(len(boxes)):
+                    for i in range(len(boxes[j])):
+                        boxes[len(boxes)-1-j][len(boxes[j])-1-i].share(shares) 
+
+            elif(switch == 2):
+                #3
+                for j in range(len(boxes)):
+                    for i in range(len(boxes[j])):
+                        boxes[len(boxes)-1-j][i].share(shares) 
+
+            elif(switch == 3):
+                #4
+                for j in range(len(boxes)):
+                    for i in range(len(boxes[j])):
+                        boxes[j][len(boxes[j])-1-i].share(shares) 
+
+
+            elif(switch == 4):
+                #5
+                for i in range(len(boxes[0])):
+                    for j in range(len(boxes)):
+                        #run simulation
+                        boxes[j][i].share(shares)
+
+            elif(switch == 5):
+                #6
+                for i in range(len(boxes[0])):
+                    for j in range(len(boxes)):
+                        boxes[len(boxes)-1-j][len(boxes[j])-1-i].share(shares) 
+
+            elif(switch == 6):
+                #7
+                for i in range(len(boxes[0])):
+                    for j in range(len(boxes)):
+                        boxes[len(boxes)-1-j][i].share(shares) 
+
+            elif(switch == 7):
+                #8
+                for i in range(len(boxes[0])):
+                    for j in range(len(boxes)):
+                        boxes[j][len(boxes[j])-1-i].share(shares) 
+
+
+        #now evaluate and get results
+        global firstClick
         for j in range(len(boxes)):
             for i in range(len(boxes[j])):
-                #run simulation
-                boxes[j][i].share()
-                
-        for j in range(len(boxes)):
-            for i in range(len(boxes[j])):
-                #yes we are sharing twice per timestep, an accidental discovery
-                boxes[j][i].share() 
                 #eval function
-                ret = boxes[j][i].eval()
+                ret = 0
+                if(box.firstClick):
+                    ret = boxes[j][i].eval()
                 #get results
                 value = boxes[j][i].blink()
 
                 #scale colors
-                R=int(255*(ret)**(1))
-                B=int(255*(value)**(1)) 
-                G=int(255*(value)**(2)) 
+                R=int(255*(ret)**(0.5+box.expR))
+                B=int(255*(value)**(0.5+box.expR)) 
+                G=int(255*(value)**(1.5+box.expR))
+                    
 
-
-
-
-        
                 if(R > 255):
                     R = 255
                 if(G > 255):
                     G = 255
                 if(B > 255):
-                    B = 255        
-
+                    B = 255    
+                    
                 points[j][i].color=(R,G,B)
 
         window.clear()
@@ -253,16 +337,16 @@ def update(dt):
 
 
 
-
+#UI EVENTS
 @window.event
-def onKeyPress(symbol, modifiers):
-    if(symbol == pyglet.window.key.ESCAPE):
+def onKeyPress(symbol, modifiers): 
+    if(symbol == pyglet.window.key.ESCAPE): #press escape to exit
         window.close()
         pyglet.app.event_loop.exit()
         pyglet.app.exit()
         exit()
 
-#interactive mouse
+#interactive mouse click and drag
 @window.event
 def on_mouse_drag(x,y,dx,dy,buttons,modifiers):
     if(buttons & pyglet.window.mouse.LEFT):
@@ -275,22 +359,59 @@ def on_mouse_drag(x,y,dx,dy,buttons,modifiers):
 
         #fire the square
         boxes[j][i].fire() 
+
+#interactive mouse buttons
 @window.event
 def on_mouse_press(x,y,button,modifiers):
-    if(button == pyglet.window.mouse.LEFT):
+    if(button == pyglet.window.mouse.LEFT): #click fire a square
         #determine which square we are in using x and y
         global divy
         global divx
-
+        
         i = int(x/hx) #find which square we're in
         j = int(y/hy)
 
         #fire the square
         boxes[j][i].fire() 
+        #begin trigger
+        box.firstClick = True
 
 
+    elif(button == pyglet.window.mouse.MIDDLE): #reset to default settings
+        box.boost = 0.04
+        box.excite = 0.22
+        print("Settings RESET")
+        box.expR = 0.5
+
+    elif(button == pyglet.window.mouse.RIGHT): #reset the squares to starting values
+        box.firstClick = False
+        for j in range(len(boxes)):
+            for i in range(len(boxes[j])):
+                boxes[j][i].reset()
+                boxes[j][i].set(0.4)
 
 
+@window.event
+def on_mouse_scroll(x, y, scroll_x, scroll_y): #scroll to adjust excitement and boost up and down
+    div = 12
+    if(scroll_y > 0):
+            if(box.boost < 0.04 + 0.029):
+                box.boost += 0.015/div
+            if(box.excite > 0.22 - 0.09):
+                box.excite -= 0.05/div
+    else:
+            if(box.excite < 0.22 + 0.09): #excite threshold is dampening
+                box.excite += 0.05/div
+            if(box.boost > 0.04 - 0.029):
+                box.boost -= 0.015/div
+
+
+    box.expR = ((1-(box.boost-0.01)/0.06) + ((box.excite-0.12)/0.20))/2
+
+    print("boost threshold: ", box.boost, "   excite threshold: ", box.excite)
+
+
+#PYGLET APP
 #schedule updates
 pyglet.clock.schedule_interval(update,(1/60))
 
