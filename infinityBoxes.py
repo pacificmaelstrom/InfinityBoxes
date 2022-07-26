@@ -110,8 +110,8 @@ class box: #these settings control the pattern. Most settings will result in bor
 size = 2
 batch = graphics.Batch()
 
-divy = int(109/size) #108/3
-divx = int(193/size) #192/3 768
+divy = int(108/size) #108/3
+divx = int(192/size) #192/3 768
 
 pxmult = 6
 
