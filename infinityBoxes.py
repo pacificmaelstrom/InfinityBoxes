@@ -221,7 +221,7 @@ depth = 0
 deltaDepth = 1
 #update the simulation
 def update(dt):
-    if(True):
+    if(box.firstClick):
         #boxes share value with neighbors
          #to maintain symetry it is important to make sure the order of evaluation has minimal effect
 
@@ -299,37 +299,34 @@ def update(dt):
                         boxes[j][len(boxes[j])-1-i].share(shares) 
 
 
-        #now evaluate and get results
-        global firstClick
-        for j in range(len(boxes)):
-            for i in range(len(boxes[j])):
-                #eval function
-                ret = 0
-                if(box.firstClick):
-                    ret = boxes[j][i].eval()
-                #get results
-                value = boxes[j][i].blink()
+    #now evaluate and get results
+    for j in range(len(boxes)):
+        for i in range(len(boxes[j])):
+            #eval function
+            ret = 0
+            if(box.firstClick):
+                ret = boxes[j][i].eval()
+            #get results
+            value = boxes[j][i].blink()
 
-                #scale colors
-                R=int(255*(ret)**(0.5+box.expR))
-                B=int(255*(value)**(0.5+box.expR)) 
-                G=int(255*(value)**(1.5+box.expR))
+            #scale colors
+            R=int(255*(ret)**(0.5+box.expR))
+            B=int(255*(value)**(0.5+box.expR)) 
+            G=int(255*(value)**(1.5+box.expR))
                     
 
-                if(R > 255):
-                    R = 255
-                if(G > 255):
-                    G = 255
-                if(B > 255):
-                    B = 255    
+            if(R > 255):
+                R = 255
+            if(G > 255):
+                G = 255
+            if(B > 255):
+                B = 255    
                     
-                points[j][i].color=(R,G,B)
+            points[j][i].color=(R,G,B)
 
-        window.clear()
-        batch.draw()
-    else:
-        #modify image pixels
-        pass
+    window.clear()
+    batch.draw()
+
 
 
 
@@ -373,8 +370,6 @@ def on_mouse_press(x,y,button,modifiers):
 
         #fire the square
         boxes[j][i].fire() 
-        #begin trigger
-        box.firstClick = True
 
 
     elif(button == pyglet.window.mouse.MIDDLE): #reset to default settings
@@ -384,11 +379,14 @@ def on_mouse_press(x,y,button,modifiers):
         box.expR = 0.5
 
     elif(button == pyglet.window.mouse.RIGHT): #reset the squares to starting values
-        box.firstClick = False
-        for j in range(len(boxes)):
-            for i in range(len(boxes[j])):
-                boxes[j][i].reset()
-                boxes[j][i].set(0.4)
+        if(box.firstClick):
+            box.firstClick = False
+            for j in range(len(boxes)):
+                for i in range(len(boxes[j])):
+                    boxes[j][i].reset()
+                    boxes[j][i].set(0.4)
+        else:
+            box.firstClick=True
 
 
 @window.event
